@@ -1,0 +1,6 @@
+.bochsrc
+*.bin
+*.img
+.DS_Store
+.idea
+exclude
