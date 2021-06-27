@@ -14,6 +14,72 @@ header_end:
 ;---------------- code section -------------
 SECTION code align=16 vstart=0
 
+int_handler_70H:
+    pusha
+    push es
+
+    mov al, 0x80
+    out 0x70, al
+    in al, 0x71 ; 读秒
+    push ax
+
+    mov al, 0x82
+    out 0x70, al
+    in al, 0x71 ; 读分
+    push ax
+
+    mov al, 0x84
+    out 0x70, al
+    in al, 0x71 ; 读时
+    push ax
+
+    mov al, 0x0c
+    out 0x70, al
+    in al, 0x71 ; 清空 RTC 寄存器 C 复位
+
+    mov ax, 0xb800
+    mov es, ax ; 准备写显存
+    mov bx, 12*160 + 36*2 ; 从第12行36列开始
+
+    pop ax ; 弹出时
+    call bcd_to_ascii
+    mov [es:bx], ah
+    mov [es:bx+2], al
+    mov byte [es:bx+4], ':'
+    not byte [es:bx+5] ; 反色
+
+    pop ax ; 弹出分
+    call bcd_to_ascii
+    mov [es:bx+6], ah
+    mov [es:bx+8], al
+    mov byte [es:bx+10], ':'
+    not byte [es:bx+11] ; 反色
+
+    pop ax ; 弹出秒
+    call bcd_to_ascii
+    mov [es:bx+12], ah
+    mov [es:bx+14], al
+
+    mov al, 0x20 ; 发送中断结束
+    out 0xa0, al ; 从片
+    out 0x20, al ; 主片
+
+    pop es
+    popa
+
+    iret
+
+bcd_to_ascii:
+    mov ah, al
+    and al, 0x0f
+    add al, 0x30
+
+    shr ah, 4
+    and ah, 0x0f
+    add ah, 0x30
+
+    ret
+
 clean_screen:
     mov cl, 25 ; 设置循环25次，充满80x25的屏幕
     @loop: ; 循环点
@@ -66,32 +132,58 @@ start:
 
 .greet:
     call clean_screen
-    mov si, msg
+    mov si, init_msg
     call print
-    call print_line
+
+.install_interrupt:
+    mov si, inst_msg
+    call print
+    mov al, 0x70
+    mov bl, 4
+    mul bl
+    mov bx, ax ; 计算中断默认地址 0x70 在 IVT 的偏移
+
+    cli ; 关中断
+
+    push es
+    mov ax, 0x0000 ; IVT 的地址
+    mov es, ax
+    mov word [es:bx], int_handler_70H ; 写入0x70中断处理器的偏移地址
+    mov word [es:bx+2], cs ; 写入0x70中断处理器的段地址
+    pop es
+
+    mov al, 0x8b
+    out 0x70, al ; 访问 RTC 寄存器 B 阻断 NMI
+    mov al, 0x12
+    out 0x71, al ; 禁止周期中断，允许更新结束后中断，BCD 码，24小时
+
+    mov al, 0x0c
+    out 0x70, al
+    in al, 0x71 ; 读取 RTC 寄存器 C 进行复位
+
+    in al, 0xa1 ; 读取 IMR 从片
+    and al, 0xfe ; 遮蔽从片其他中断，只允许时间中断 11111110
+    out 0xa1, al
+
+    sti ; 开中断
+
+    mov si, done_msg
+    call print
+
+    mov si, tips_msg
+    call print
+
 .hlt_loop: ; 避免 cpu 空转
     hlt
     jmp .hlt_loop
 
 ;---------------- data section -------------
 SECTION data align=16 vstart=0
-    msg db ' Hello World!', 0x0a
-        db ' Successfully Read Data from Hard Disk!', 0x0a
-        db ' Example Code in NASM:', 0x0a
-        db '    SECTION .text vstart=0x7c00', 0x0a
-        db '        xor ax, ax', 0x0a
-        db '        mov ds, ax', 0x0a
-        db '        mov es, ax', 0x0a
-        db '        mov ss, ax', 0x0a, 0x0a
-        db '        mov sp, 0x7c00', 0x0a, 0x0a
-        db '        mov si, msg', 0x0a
-        db '        call print', 0x0a
-        db '        call print_line', 0x0a, 0x0a
-        db '        %include "print.s"', 0x0a, 0x0a
-        db '        msg: db "Hello Yuchanns!", 0', 0x0a, 0x0a
-        db '        times 510 - ($-$$) db 0', 0x0a
-        db '                           dw 0xaa55', 0x0a, 0x0a
-        db ' Written by yuchanns at 2021-06-17 23:53:00.', 0
+    init_msg db ' Hello World!', 0x0a
+             db ' Successfully Read Data from Hard Disk!', 0x0a, 0x0a, 0
+    inst_msg db ' Installing a interrupt handler 70H...', 0x0a, 0
+    done_msg db ' Done.', 0x0a, 0x0a, 0
+    tips_msg db ' Clock is now working.', 0
 
 ;---------------- stack section -------------
 SECTION stack align=16 vstart=0
