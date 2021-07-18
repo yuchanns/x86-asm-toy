@@ -63,8 +63,8 @@ start:
     mov ebx, buffer
     call far [fs:PrintString]
 
-    ; 返回到内核
-    jmp far [fs:TerminateProgram]
+    ; 调用内核停机过程
+    call far [fs:TerminateProgram]
 
 code_end:
 
