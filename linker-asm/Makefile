@@ -1,3 +1,16 @@
+EXECUTABLES = $(ASM) $(LD) $(OBJCOPY) $(QEMU)
+EXECUTABLES_CHECK := $(foreach exec,$(EXECUTABLES),\
+	 	$(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH")))
+OS := $(shell uname -s)
+ACCELFLAGS :=
+ifeq ($(OS),Linux)
+	ACCELFLAGS += -accel kvm
+else ifeq ($(OS),Darwin)
+	ACCELFLAGS += -accel hvf -cpu host
+else
+    $(error "Not Support on Current OS")
+endif
+
 RM = rm
 
 ASM     = nasm
@@ -8,7 +21,7 @@ QEMU    = qemu-system-x86_64
 ASMBFLAGS    = -f elf
 LDFLAGS      = --script=linker.ld
 OBJCOPYFLAGS = -O binary
-QEMUFLAGS    = -drive format=raw,file=$(KERNEL_BIN) -accel hvf -cpu Nehalem
+QEMUFLAGS    = -drive format=raw,file=$(KERNEL_BIN) $(ACCELFLAGS)
 
 KERNEL_OBJS :=
 KERNEL_OBJS += mbr.o app.o
