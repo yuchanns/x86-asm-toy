@@ -19,7 +19,7 @@ _start:
 	mov sp, 0x7c00
 
 load_bootloader_from_disk:
-	lea eax, _bootloader_start_addr
+	lea eax, [_bootloader_start_addr]
 	mov ebx, eax
 	shr ebx, 4
 	mov [dap_buffer_seg], bx
@@ -28,18 +28,18 @@ load_bootloader_from_disk:
 	sub eax, ebx
 	mov [dap_buffer_addr], ax
 
-	lea eax, _bootloader_start_addr
-	lea ebx, _bootloader_end_addr
+	lea eax, [_bootloader_start_addr]
+	lea ebx, [_bootloader_end_addr]
 	sub ebx, eax
 	shr ebx, 9
 	mov [dap_blocks], bx
 
-	lea ebx, _start
+	lea ebx, [_start]
 	sub eax, ebx
 	shr eax, 9
 	mov [dap_start_lba], eax
 
-	lea si, dap
+	lea si, [dap]
 	mov ah, 0x42
 	int 0x13
 	

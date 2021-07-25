@@ -18,9 +18,9 @@ LD      = ld.lld
 OBJCOPY = llvm-objcopy
 QEMU    = qemu-system-x86_64
 
-ASMBFLAGS    = -f elf
+ASMBFLAGS    = -f elf -F dwarf -g
 LDFLAGS      = --script=linker.ld
-OBJCOPYFLAGS = -O binary
+OBJCOPYFLAGS = --strip-all -O binary
 QEMUFLAGS    = -drive format=raw,file=$(KERNEL_BIN) $(ACCELFLAGS)
 
 KERNEL_OBJS :=
