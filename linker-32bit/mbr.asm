@@ -49,27 +49,19 @@ clean_screen:
     ; 同时可以通过 jmp 指令快速清空段选择器和高速缓存器中的内容
     ; 代码段描述符索引为#2, 在 gdt 中, 特权级为 0
     ; 所以段选择子为 0000000000010_0_00 转为16进制的值为 0x0010
-    ; 加上偏移地址(标号)就组成了 32 bit 下的物理地址
-	; 注意因为 linker.ld 定义了地址为 0x7c00 
-	; 所以标号 flush 要手动减掉 0x7c00
-    jmp dword 0x0010:flush-0x7c00
+    jmp dword 0x0010:flush
 
     [bits 32] ; 指示编译器下面的代码编译成 32 bit 指令
 
 flush:
-    ; 引导程序别名数据段描述符索引为#3, 在 gdt 中, 特权级为 0
-    ; 所以段选择子为 0000000000011_0_00 转为16进制的值为 0x0018
-    mov eax, 0x0018
-    mov ds, eax
-
     ; 加载#1描述符即数据段 4GB 的选择子
     mov eax, 0x0008
     mov es, eax
     mov fs, eax
     mov gs, eax
 
-    ; 加载#4描述符堆栈选择子
-    mov eax, 0x0020
+    ; 加载#3描述符堆栈选择子
+    mov eax, 0x0018
     mov ss, eax
     xor esp, esp
 
@@ -103,11 +95,8 @@ ghalt:
 		dd 0x0000ffff
 		dd 0x00cf9200
 	codedesc:
-		dd 0x7c0001ff
-		dd 0x00409800
-	aliascodedesc:
-		dd 0x7c0001ff
-		dd 0x00409200
+		dd 0x0000ffff
+		dd 0x00cf9a00
 	stackdesc:
 		dd 0x00007a00
 		dd 0x00409600
